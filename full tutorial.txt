@@ -1,0 +1,1554 @@
+
+
+
+ANDROID EC2 RETROFIT EXAMPLE
+
+
+
+1. We can start with a basic Node server. 
+
+2. Open Visual Studio Code
+
+3. At our root level, in this case:
+C:\Users\<username>\aws\ec2-server>
+
+run the command npm init
+
+4. In our package.json file:
+{
+  "name": "ec2-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "author": "",
+  "license": "ISC"
+}
+
+
+5. At the same root level, create a new file: index.js
+
+6. Inside index.js:
+
+import http from 'http';
+
+var server = http.createServer(function(req, res){
+    if(req.url == '/'){
+        res.setHeader("Content-type", "application/json");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.writeHead(200);
+        res.statusCode(200);
+        res.end('You hit the AWS server');
+    }
+    else {
+        res.end('Invalid url')
+    }
+});
+
+server.listen(5000, function() {
+    console.log('Server running on port 5000');
+})
+
+
+
+7. Switch over to Android Studio
+
+8. Create a new project: 'EC2Retrofit'
+
+9. API = 21 (SDK)
+
+10. Language = Java
+
+11. In our build.gradle(module: app) file, add the following dependencies:
+
+    //http dependencies
+    implementation 'com.squareup.retrofit2:retrofit:2.4.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.4.0'
+    implementation 'com.squareup.okhttp3:okhttp:3.12.1'
+    implementation 'com.squareup.okhttp3:logging-interceptor:3.12.1'
+
+
+
+12. Sync now
+
+
+13. Go into activity_main.xml and modify the TextView:
+
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/ec2TextView"
+        android:textSize="18sp"
+        android:textColor="@color/black"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+
+
+
+14. In the root directory of our Android project -->
+java > com > cosmic > ec2retrofit:
+
+Create a new file:
+EC2API as an interface
+
+
+15. In the same root director create a new file called 'Post.java'
+It will be our model class. Inside this nw file:
+
+package com.cosmic.ec2retrofit;
+
+public class Post {
+
+    private int id;
+    private String name;
+    private String email;
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+}
+
+
+
+
+16. Go back into our EC2API file:
+
+package com.cosmic.ec2retrofit;
+
+import java.util.List;
+import retrofit2.Call;
+import retrofit2.http.GET;
+
+public interface EC2API {
+
+    @GET("posts")
+    Call<Post> getPost();
+
+}
+
+
+
+17. Switch to our MainActivity.java
+
+
+
+package com.cosmic.ec2retrofit;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import android.os.Bundle;
+import android.widget.TextView;
+
+import java.util.List;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+
+public class MainActivity extends AppCompatActivity {
+
+    private TextView textView;
+    EC2API ec2API;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        textView = findViewById(R.id.ec2TextView);
+
+        initRetrofit();
+    }
+
+    private void initRetrofit(){
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("<your ec2 public ip address>")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+        ec2API = retrofit.create(EC2API.class);
+
+        getPosts();
+    }
+
+    private void getPosts(){
+        Call<Post> call = ec2API.getPost();
+        call.enqueue(new Callback<Post>() {
+            @Override
+            public void onResponse(Call<Post> call, Response<Post> response) {
+                if(!response.isSuccessful()){
+                    textView.setText(response.code());
+                    return;
+                }
+                Post post = response.body();
+                textView.setText(post.getId() + "\n" + post.getName() + "\n" + post.getEmail());
+            }
+
+            @Override
+            public void onFailure(Call<Post> call, Throwable t) {
+                textView.setText(t.getMessage());
+            }
+        });
+    }
+}
+
+
+
+
+
+18. Open our AndroidManifest.xml file and the following permission:
+
+<uses-permission android:name="android.permission.INTERNET" />
+
+
+
+19. Open our AWS Management console
+
+
+20. Enter the EC2 console
+
+21. Select the Launch Instance button
+
+22. Select Amazon Linux AMI 2
+
+23. Select t2.micro
+
+24. Select Configure Instance Details
+
+25. Get to COnfigure Security Group
+
+26. Click Add Rule -> Custom TCP > Port Range 5000 > Source = 'Anywhere'
+
+27. Click add rule HTTP anywhere
+
+28. Click 'Review and Launch' > Launch
+
+29. Select your key pair and click the acknowledge box and select 'Launch Instance' button
+
+30. View Instance button
+
+31. Select the newly created EC2 instance
+
+32. Copy out public IP address:
+34.238.52.151
+
+33. Click Connect
+
+34. Click EC2 Instance Connect tab and click the 'Connect' button
+
+35. Inside, the SSH console for our EC2, install node version manager:
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash
+
+36. Activate nvm: . ~/.nvm/nvm.sh
+
+37. Install node: nvm install node
+
+38. verify node installation node -v
+
+39. Install git: sudo yum install git
+
+40. Run command: git clone https://github.com/adamsawyer391/SimpleNodeServer.git
+
+41. run 'ls' command to verify installation
+
+42. cd SimpleNodeServer
+
+43. run 'ls' to verify contents of folder
+
+44. run node server.js
+
+45. Go back into our EC2 console and select the running EC2 instance
+
+46. Click on Security tab and click on the security group
+
+47. Edit inbound rules
+
+48. Add HTTPS from anywhere
+
+49. Delete the previous Custom TCP and add a new Custom TCP with port 8080 from anywhere
+
+50. Save rules button click
+
+51. Go back into Android Studio
+
+52. Go into MainActivity.java and modify our Retrofit builder:
+
+private void initRetrofit(){
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("http://34.238.52.151:8080")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+        ec2API = retrofit.create(EC2API.class);
+
+        getPosts();
+    }
+
+This is the public IP address of our EC2 server
+
+53. Run program in Android. Program comes up but with an error displayed in app: 
+'CLEARTEXT communication to 34.238.52.151 not permitted by network security policy
+
+54. Keep the retrofit builder an http:// call. We are not doing anything securely yet
+
+55. In the AndroidManifest.xml file add usesClearText attribute:
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+
+56. Go into out EC2API interface. Because we are at an 'index' path, we are not going into "posts" like we originally wrote. Modify it to this:
+
+package com.cosmic.ec2retrofit;
+
+import java.util.List;
+import retrofit2.Call;
+import retrofit2.http.GET;
+
+public interface EC2API {
+
+    @GET("/")
+    Call<Post> getPost();
+
+}
+
+57. Now run the program. You should see it all displayed in the textview.
+
+58. Now we want to do something a little more complex. Let's terminate that EC2 instance.
+
+59. Go back into Visual Studio Code
+
+60. Create a new file at our root directory: 'datafile.js
+
+61. Inside datafile.js:
+export const data = [
+    {
+        id: 1,
+        name: "Harold Cricke",
+        phone: '978-555-0001',
+        url: 'https://thatmomentin.com/wp-content/uploads/2016/08/Screen-Shot-2016-08-21-at-6.54.17-AM-650x380.png'
+    },
+    {
+        id: 2,
+        name: "Jean-Luc Picard",
+        phone: '978-555-0002',
+        url: 'https://www.indiewire.com/wp-content/uploads/2018/08/shutterstock_2115457cs.jpg'
+    },
+    {
+        id: 3,
+        name: "Katherine Janeway",
+        phone: '978-555-0003',
+        url: 'https://exclaim.ca/images/kate_mulgrew_janeway.jpg'
+    },
+    {
+        id: 4,
+        name: "Benjamin Sisko",
+        phone: '978-555-0004',
+        url: 'https://i0.wp.com/thenerdsofcolor.org/wp-content/uploads/2013/09/benjamin_sisko_captain.jpg'
+    },
+    {
+        id: 5,
+        name: "Jonathan Archer",
+        phone: '978-555-0005',
+        url: 'https://am24.mediaite.com/tms/cnt/uploads/2020/03/captain-archer-scott-bakula-star-trek-enterprise.jpg'
+    },
+    {
+        id: 6,
+        name: "Chakotay",
+        phone: '978-555-0006',
+        url: 'https://pbs.twimg.com/media/DRVLrDfW4AAf_IF.jpg'
+    },
+    {
+        id: 7,
+        name: "Kes",
+        phone: '978-555-0007',
+        url: 'http://images2.fanpop.com/image/photos/9900000/Kes-star-trek-women-9919601-350-402.jpg'
+    },
+    {
+        id: 8,
+        name: "The Doctor",
+        phone: '978-555-0008',
+        url: 'https://www.giantfreakinrobot.com/wp-content/uploads/2020/10/doctorvoyager34.jpg'
+    },
+    {
+        id: 9,
+        name: "Data",
+        phone: '978-555-0009',
+        url: 'https://i.pinimg.com/originals/12/d1/f8/12d1f8b73796e5042f38cfe4c16558b1.jpg'
+    },
+    {
+        id: 10,
+        name: "Belanna Torres",
+        phone: '978-555-00010',
+        url: 'https://i.pinimg.com/originals/65/5e/07/655e0709ac9bffbbcc0948d0b33ba0c8.jpg'
+    },
+]
+
+
+62. Go into our index.js file and modify:
+import http from 'http';
+import datafile from './datafile'
+
+var server = http.createServer(function(req, res){
+    if(req.url == '/'){
+        res.setHeader("Content-type", "application/json");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.writeHead(200);
+        res.statusCode(200);
+        res.end('You hit the AWS server');
+    }
+    else if(req.url == '/star-trek'){
+        res.setHeader("Content-type", "application/json");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.writeHead(200);
+        res.statusCode(200);
+        res.end(datafile);
+    }
+    else {
+        res.end('Invalid url')
+    }
+});
+
+server.listen(5000, function() {
+    console.log('Server running on port 5000');
+})
+
+
+63. Go back into our EC2 console
+
+64. Launch a new instance
+	--Linux AMI 2
+	--t2.micro
+	--Security Group:
+		SSH anywhere
+		HTTP anywhere
+		HTTPS anywhere
+		CustomTCP 5000 anywhere
+
+65. Launch instance
+
+66. Upload our current project to GitHub
+fill in instructions here.........
+
+
+67. Go back into the EC2 console
+
+68. Click on the running instance
+
+69. Click connect
+
+70. Repeat the following steps:
+	35. Inside, the SSH console for our EC2, install node 	version manager:
+	curl -o- https://raw.githubusercontent.com/nvm-	.com/nvm-sh/nvm/v0.34.0/install.sh | bash
+
+	36. Activate nvm: . ~/.nvm/nvm.sh
+
+	37. Install node: nvm install node
+
+	38. verify node installation node -v
+
+	39. Install git: sudo yum install git
+
+71. Starting the server didn't like the import statements:
+
+import http from 'http';
+^^^^^^
+
+SyntaxError: Cannot use import statement outside a module
+    at Object.compileFunction (node:vm:352:18)
+    at wrapSafe (node:internal/modules/cjs/loader:1031:15)
+    at Module._compile (node:internal/modules/cjs/loader:1065:27)
+    at Object.Module._extensions..js (node:internal/modules/cjs/loader:1153:10)
+    at Module.load (node:internal/modules/cjs/loader:981:32)
+    at Function.Module._load (node:internal/modules/cjs/loader:822:12)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:79:12)
+    at node:internal/main/run_main_module:17:47
+[ec2-user@ip-172-31-85-76 EC2-Server]$ 
+
+72. Go back into out index.js file in Visual Studio Code and modify:
+
+var http = require('http')
+var datafile = require('./datafile');
+
+var server = http.createServer(function(req, res){
+    if(req.url == '/'){
+        res.setHeader("Content-type", "application/json");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.writeHead(200);
+        res.statusCode(200);
+        res.end('You hit the AWS server');
+    }
+    else if(req.url == '/star-trek'){
+        res.setHeader("Content-type", "application/json");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.writeHead(200);
+        res.statusCode(200);
+        res.end(datafile);
+    }
+    else {
+        res.end('Invalid url')
+    }
+});
+
+server.listen(5000, function() {
+    console.log('Server running on port 5000');
+})
+
+
+
+73. Open git bash at our ec2-server folder in windows explorer
+
+
+74. Push the changes to our git repo:
+--git init
+-- git add .
+--git commit -m "second commit"
+--git push 
+https://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@github.com/adamsawyer391/EC2-Server.git
+
+75. In our SSH AWS terminal cd to home directory
+
+76. Run the command rm EC2-Server -r 
+to delete the directory
+
+77. Confirm deletion
+
+78. Run git clone https://github.com/adamsawyer391/EC2-Server.git
+
+79. Run node index.js
+
+80. Error:
+export const data = [
+^^^^^^
+
+SyntaxError: Unexpected token 'export'
+    at Object.compileFunction (node:vm:352:18)
+    at wrapSafe (node:internal/modules/cjs/loader:1031:15)
+    at Module._compile (node:internal/modules/cjs/loader:1065:27)
+    at Object.Module._extensions..js (node:internal/modules/cjs/loader:1153:10)
+    at Module.load (node:internal/modules/cjs/loader:981:32)
+    at Function.Module._load (node:internal/modules/cjs/loader:822:12)
+    at Module.require (node:internal/modules/cjs/loader:1005:19)
+    at require (node:internal/modules/cjs/helpers:102:18)
+    at Object.<anonymous> (/home/ec2-user/EC2-Server/index.js:2:16)
+    at Module._compile (node:internal/modules/cjs/loader:1101:14)
+
+
+81. Go into our datafile.js and remove the "export" keyword
+
+82. Push the commit to Git
+
+83. In the SSH terminal remove the existing repo and then reinstall the current version from git
+
+84. Retrieve the current IP address from our running instance
+52.203.46.157
+
+85. Go back into Android Studio
+
+86. Modify the retrofit builder to accomodate the new IP address and port number:
+
+    private void initRetrofit(){
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("http://52.203.46.157:5000")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+        ec2API = retrofit.create(EC2API.class);
+
+        getPosts();
+    }
+
+87. Go into our EC2API file and modify:
+
+package com.cosmic.ec2retrofit;
+
+import java.util.List;
+import retrofit2.Call;
+import retrofit2.http.GET;
+
+public interface EC2API {
+
+//    @GET("/")
+//    Call<Post> getPost();
+
+    @GET("/")
+    Call<String> getWelcomeMessage();
+
+}
+
+
+88. Go back into our MainActivity.java file and comment out getPosts() method call
+
+89. Further modify MainActivity.java:
+
+public class MainActivity extends AppCompatActivity {
+
+    private TextView textView;
+    EC2API ec2API;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        textView = findViewById(R.id.ec2TextView);
+
+        initRetrofit();
+    }
+
+    private void initRetrofit(){
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("http://52.203.46.157:5000")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+        ec2API = retrofit.create(EC2API.class);
+
+        //getPosts();
+        getWelcomeMessage();
+    }
+    
+    private void getWelcomeMessage(){
+        Call<String > call = ec2API.getWelcomeMessage();
+        call.enqueue(new Callback<String>() {
+            @Override
+            public void onResponse(Call<String> call, Response<String> response) {
+                if(!response.isSuccessful()){
+                    textView.setText(response.code());
+                    return;
+                }
+                textView.setText(response.body());
+            }
+
+            @Override
+            public void onFailure(Call<String> call, Throwable t) {
+                textView.setText(t.getMessage());
+            }
+        });
+    }
+
+//    private void getPosts(){
+//        Call<Post> call = ec2API.getPost();
+//        call.enqueue(new Callback<Post>() {
+//            @Override
+//            public void onResponse(Call<Post> call, Response<Post> response) {
+//                if(!response.isSuccessful()){
+//                    textView.setText(response.code());
+//                    return;
+//                }
+//                Post post = response.body();
+//                textView.setText(post.getId() + "\n" + post.getName() + "\n" + post.getEmail());
+//            }
+//
+//            @Override
+//            public void onFailure(Call<Post> call, Throwable t) {
+//                textView.setText(t.getMessage());
+//            }
+//        });
+//    }
+}
+
+
+90. Attempted running the program. In Android got 'Failed to connect to /52.203.46.157:5000 '
+
+91. Couldn't open in browser. In terminal, the following error message was displayed: (SSH terminal) :
+
+/home/ec2-user/EC2-Server/index.js:9
+        res.statusCode(200);
+            ^
+
+TypeError: res.statusCode is not a function
+    at Server.<anonymous> (/home/ec2-user/EC2-Server/index.js:9:13)
+    at Server.emit (node:events:390:28)
+    at parserOnIncoming (node:_http_server:951:12)
+    at HTTPParser.parserOnHeadersComplete (node:_http_common:128:17)
+[ec2-user@ip-172-31-85-76 EC2-Server]$ 
+
+
+92. Go into Visual Studio COde and delete res.statusCode(200). Save. Push new commit to github. Delete existing server on EC2 and reinstall latest update
+
+93. There have been several problems which I will attempt to outline now:
+
+94. Modify your index.js file:
+
+var http = require('http')
+var datafile = require('./datafile');
+
+var server = http.createServer(function(req, res){
+    if(req.url == '/'){
+        res.setHeader("Content-type", "application/json");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.writeHead(200);
+        let dataObject = { id: 100, name: 'Walter White', email: 'chickenbrothers@fring.com' };
+        let data = JSON.stringify(dataObject);
+        res.end(data);
+    }
+    else if(req.url == '/star-trek'){
+        res.setHeader("Content-type", "application/json");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.writeHead(200);
+        res.end(datafile);
+    }
+    else {
+        res.end('Invalid url')
+    }
+});
+
+server.listen(5000, function() {
+    console.log('Server running on port 5000');
+})
+
+
+95. Modify our EC2API file in Android Studio:
+
+public interface EC2API {
+
+    @GET("/")
+    Call<Post> getPost();
+
+//    @GET("/")
+//    Call<String> getWelcomeMessage();
+
+}
+
+
+
+96. Modify our MainActivity.java file in Android Studio:
+
+public class MainActivity extends AppCompatActivity {
+
+    private static final String TAG = "MainActivity";
+
+    private TextView textView;
+    EC2API ec2API;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        textView = findViewById(R.id.ec2TextView);
+
+        initRetrofit();
+    }
+
+    private void initRetrofit(){
+        Gson gson = new GsonBuilder().setLenient().create();
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("http://52.203.46.157:5000")
+                .addConverterFactory(GsonConverterFactory.create(gson))
+                .build();
+        ec2API = retrofit.create(EC2API.class);
+
+        getPosts();
+    }
+
+    private void getPosts(){
+        Call<Post> call = ec2API.getPost();
+        call.enqueue(new Callback<Post>() {
+            @Override
+            public void onResponse(Call<Post> call, Response<Post> response) {
+                if(!response.isSuccessful()){
+                    textView.setText(response.code());
+                    return;
+                }
+                Post post = response.body();
+                textView.setText(post.getId() + "\n" + post.getName() + "\n" + post.getEmail());
+            }
+
+            @Override
+            public void onFailure(Call<Post> call, Throwable t) {
+                textView.setText(t.getMessage());
+            }
+        });
+    }
+}
+
+
+97. Run program. Success! Make sure you have uninstalled older versions of the repo/server, you have commited these above changes, and reinstalled the server on your EC2. May have to reboot the EC2 once or twice.
+
+98. Create a new file in Android studio at the root directory called 'StarTrek.java'
+
+99. Create the StarTrek model:
+
+public class StarTrek {
+
+    private int id;
+    private String name;
+    private String phone;
+    private String url;
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+}
+
+
+100. One-hundreth episode special!
+
+Modify our EC2API file in AS:
+
+package com.cosmic.ec2retrofit;
+
+import java.util.List;
+import retrofit2.Call;
+import retrofit2.http.GET;
+
+public interface EC2API {
+
+    @GET("/")
+    Call<Post> getPost();
+    
+    @GET("star-trek")
+    Call<List<StarTrek>> getStarTreks();
+
+}
+
+
+101. Modify our MainActivity.java file:
+
+
+public class MainActivity extends AppCompatActivity {
+
+    private static final String TAG = "MainActivity";
+
+    private TextView textView;
+    EC2API ec2API;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        textView = findViewById(R.id.ec2TextView);
+
+        initRetrofit();
+    }
+
+    private void initRetrofit(){
+        Gson gson = new GsonBuilder().setLenient().create();
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("http://52.203.46.157:5000")
+                .addConverterFactory(GsonConverterFactory.create(gson))
+                .build();
+        ec2API = retrofit.create(EC2API.class);
+
+        //getPosts();
+        getStarTreks();
+    }
+
+    private void getPosts(){
+        Call<Post> call = ec2API.getPost();
+        call.enqueue(new Callback<Post>() {
+            @Override
+            public void onResponse(Call<Post> call, Response<Post> response) {
+                if(!response.isSuccessful()){
+                    textView.setText(response.code());
+                    return;
+                }
+                Post post = response.body();
+                textView.setText(post.getId() + "\n" + post.getName() + "\n" + post.getEmail());
+            }
+
+            @Override
+            public void onFailure(Call<Post> call, Throwable t) {
+                textView.setText(t.getMessage());
+            }
+        });
+    }
+    
+    private void getStarTreks(){
+        Call<List<StarTrek>> starTreks = ec2API.getStarTreks();
+        starTreks.enqueue(new Callback<List<StarTrek>>() {
+            @Override
+            public void onResponse(Call<List<StarTrek>> call, Response<List<StarTrek>> response) {
+                if (!response.isSuccessful()){
+                    Log.d(TAG, "onResponse: there was a response but it was not successful : " + "\n" + response.code());
+                }
+                List<StarTrek> starTrek = response.body();
+                for (int i = 0; i < starTrek.size(); i++){
+                    Log.d(TAG, "onResponse: star trek items : " + starTrek.get(i) + "\n");
+                }
+                
+            }
+
+            @Override
+            public void onFailure(Call<List<StarTrek>> call, Throwable t) {
+                textView.setText(t.getMessage());
+            }
+        });
+    }
+}
+
+
+
+102. Run program and check Logcat
+
+103. Collosal failure. Open Visual Studio Code and modify your index.js file:
+
+var http = require('http')
+var datafile = require('./datafile');
+
+var server = http.createServer(function(req, res){
+    if(req.url == '/'){
+        res.setHeader("Content-type", "application/json");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.writeHead(200);
+        let dataObject = { id: 100, name: 'Walter White', email: 'chickenbrothers@fring.com' };
+        let data = JSON.stringify(dataObject);
+        res.end(data);
+    }
+    else if(req.url == '/star-trek'){
+        res.setHeader("Content-type", "application/json");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.writeHead(200);
+        console.log(datafile);
+        let dataObject = datafile;
+        let data = JSON.stringify(dataObject);
+        res.end(data);
+    }
+    else {
+        res.end('Invalid url')
+    }
+});
+
+server.listen(5000, function() {
+    console.log('Server running on port 5000');
+})
+
+
+
+104. Uninstall EC2-Server, commit changes to GitHub, reinstall server to ec2
+
+105. Modify index.js file:
+
+
+var http = require('http')
+//var datafile = require('./datafile');
+
+var server = http.createServer(function(req, res){
+    if(req.url == '/'){
+        res.setHeader("Content-type", "application/json");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.writeHead(200);
+        let dataObject = { id: 100, name: 'Walter White', email: 'chickenbrothers@fring.com' };
+        let data = JSON.stringify(dataObject);
+        res.end(data);
+    }
+    else if(req.url == '/star-trek'){
+        res.setHeader("Content-type", "application/json");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.writeHead(200);
+        let dataObject = [
+            {
+                id: 1,
+                name: "Harold Cricke",
+                phone: '978-555-0001',
+                url: 'https://thatmomentin.com/wp-content/uploads/2016/08/Screen-Shot-2016-08-21-at-6.54.17-AM-650x380.png'
+            },
+            {
+                id: 2,
+                name: "Jean-Luc Picard",
+                phone: '978-555-0002',
+                url: 'https://www.indiewire.com/wp-content/uploads/2018/08/shutterstock_2115457cs.jpg'
+            },
+            {
+                id: 3,
+                name: "Katherine Janeway",
+                phone: '978-555-0003',
+                url: 'https://exclaim.ca/images/kate_mulgrew_janeway.jpg'
+            },
+            {
+                id: 4,
+                name: "Benjamin Sisko",
+                phone: '978-555-0004',
+                url: 'https://i0.wp.com/thenerdsofcolor.org/wp-content/uploads/2013/09/benjamin_sisko_captain.jpg'
+            },
+            {
+                id: 5,
+                name: "Jonathan Archer",
+                phone: '978-555-0005',
+                url: 'https://am24.mediaite.com/tms/cnt/uploads/2020/03/captain-archer-scott-bakula-star-trek-enterprise.jpg'
+            },
+            {
+                id: 6,
+                name: "Chakotay",
+                phone: '978-555-0006',
+                url: 'https://pbs.twimg.com/media/DRVLrDfW4AAf_IF.jpg'
+            },
+            {
+                id: 7,
+                name: "Kes",
+                phone: '978-555-0007',
+                url: 'http://images2.fanpop.com/image/photos/9900000/Kes-star-trek-women-9919601-350-402.jpg'
+            },
+            {
+                id: 8,
+                name: "The Doctor",
+                phone: '978-555-0008',
+                url: 'https://www.giantfreakinrobot.com/wp-content/uploads/2020/10/doctorvoyager34.jpg'
+            },
+            {
+                id: 9,
+                name: "Data",
+                phone: '978-555-0009',
+                url: 'https://i.pinimg.com/originals/12/d1/f8/12d1f8b73796e5042f38cfe4c16558b1.jpg'
+            },
+            {
+                id: 10,
+                name: "Belanna Torres",
+                phone: '978-555-00010',
+                url: 'https://i.pinimg.com/originals/65/5e/07/655e0709ac9bffbbcc0948d0b33ba0c8.jpg'
+            },
+        ]
+        let data = JSON.stringify(dataObject);
+        res.end(data);
+    }
+    else {
+        res.end('Invalid url')
+    }
+});
+
+server.listen(5000, function() {
+    console.log('Server running on port 5000');
+})
+
+
+106. Now run the Android program with Main.java:
+public class MainActivity extends AppCompatActivity {
+
+    private static final String TAG = "MainActivity";
+
+    private TextView textView;
+    EC2API ec2API;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        textView = findViewById(R.id.ec2TextView);
+
+        initRetrofit();
+    }
+
+    private void initRetrofit(){
+        Gson gson = new GsonBuilder().setLenient().create();
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("http://52.203.46.157:5000")
+                .addConverterFactory(GsonConverterFactory.create(gson))
+                .build();
+        ec2API = retrofit.create(EC2API.class);
+
+        //getPosts();
+        getStarTreks();
+    }
+
+    private void getPosts(){
+        Call<Post> call = ec2API.getPost();
+        call.enqueue(new Callback<Post>() {
+            @Override
+            public void onResponse(Call<Post> call, Response<Post> response) {
+                if(!response.isSuccessful()){
+                    textView.setText(response.code());
+                    return;
+                }
+                Post post = response.body();
+                textView.setText(post.getId() + "\n" + post.getName() + "\n" + post.getEmail());
+            }
+
+            @Override
+            public void onFailure(Call<Post> call, Throwable t) {
+                textView.setText(t.getMessage());
+            }
+        });
+    }
+
+    private void getStarTreks(){
+        Call<List<StarTrek>> starTreks = ec2API.getStarTreks();
+        starTreks.enqueue(new Callback<List<StarTrek>>() {
+            @Override
+            public void onResponse(Call<List<StarTrek>> call, Response<List<StarTrek>> response) {
+                if (!response.isSuccessful()){
+                    Log.d(TAG, "onResponse: there was a response but it was not successful : " + "\n" + response.code());
+                }
+                List<StarTrek> starTrek = response.body();
+                for (int i = 0; i < starTrek.size(); i++){
+                    Log.d(TAG, "onResponse: star trek items : " + starTrek.get(i) + "\n");
+                }
+
+            }
+
+            @Override
+            public void onFailure(Call<List<StarTrek>> call, Throwable t) {
+                textView.setText(t.getMessage());
+            }
+        });
+    }
+}
+
+
+107. Success!
+
+D/MainActivity: onResponse: star trek items : com.cosmic.ec2retrofit.StarTrek@d9b5111
+
+D/MainActivity: onResponse: star trek items : com.cosmic.ec2retrofit.StarTrek@1fae276
+
+D/MainActivity: onResponse: star trek items : com.cosmic.ec2retrofit.StarTrek@6169077
+
+D/MainActivity: onResponse: star trek items : com.cosmic.ec2retrofit.StarTrek@aa9f4e4
+
+D/MainActivity: onResponse: star trek items : com.cosmic.ec2retrofit.StarTrek@f52ed4d
+
+ D/MainActivity: onResponse: star trek items : com.cosmic.ec2retrofit.StarTrek@12ab002
+
+D/MainActivity: onResponse: star trek items : com.cosmic.ec2retrofit.StarTrek@459bd13
+
+D/MainActivity: onResponse: star trek items : com.cosmic.ec2retrofit.StarTrek@1837b50
+
+D/MainActivity: onResponse: star trek items : com.cosmic.ec2retrofit.StarTrek@46e1149
+
+D/MainActivity: onResponse: star trek items : com.cosmic.ec2retrofit.StarTrek@397ca4e
+
+
+
+108. Switch into Android Studio
+
+109. Modify acitivty_main.xml:
+
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity"
+    android:padding="5dp"
+    android:background="@color/purple_200">
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/recycler_view" />
+
+</RelativeLayout>
+
+
+110. Modify MainActivity.java:
+
+public class MainActivity extends AppCompatActivity {
+
+    private static final String TAG = "MainActivity";
+
+    EC2API ec2API;
+    private RecyclerView recyclerView;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        recyclerView = findViewById(R.id.recycler_view);
+
+        initRetrofit();
+    }
+
+    private void initRetrofit(){
+        Gson gson = new GsonBuilder().setLenient().create();
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("http://52.203.46.157:5000")
+                .addConverterFactory(GsonConverterFactory.create(gson))
+                .build();
+        ec2API = retrofit.create(EC2API.class);
+
+        getStarTreks();
+    }
+
+    private void getStarTreks(){
+        Call<List<StarTrek>> starTreks = ec2API.getStarTreks();
+        starTreks.enqueue(new Callback<List<StarTrek>>() {
+            @Override
+            public void onResponse(Call<List<StarTrek>> call, Response<List<StarTrek>> response) {
+                if (!response.isSuccessful()){
+                    Log.d(TAG, "onResponse: there was a response but it was not successful : " + "\n" + response.code());
+                }
+                List<StarTrek> starTrek = response.body();
+                for (int i = 0; i < starTrek.size(); i++){
+                    Log.d(TAG, "onResponse: star trek items : " + starTrek.get(i).getName() + "\n");
+                }
+
+            }
+
+            @Override
+            public void onFailure(Call<List<StarTrek>> call, Throwable t) {
+                Toast.makeText(MainActivity.this, t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+}
+
+
+111. Go into res > layout > and create file item_view_star_trek.xml:
+
+
+112. Add the following dependencies:
+
+dependencies {
+
+    //material UI
+    implementation 'androidx.appcompat:appcompat:1.3.1'
+    implementation 'com.google.android.material:material:1.4.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.1'
+    implementation 'de.hdodenhof:circleimageview:3.1.0'
+    implementation 'com.github.bumptech.glide:glide:4.12.0'
+
+    //http dependencies
+    implementation 'com.squareup.retrofit2:retrofit:2.4.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.4.0'
+    implementation 'com.squareup.okhttp3:okhttp:3.12.1'
+    implementation 'com.squareup.okhttp3:logging-interceptor:3.12.1'
+
+    //unit testing
+    testImplementation 'junit:junit:4.+'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.3'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
+}
+
+
+113. Sync Now
+
+
+114. Return to item_view_star_trek.xml and modify:
+
+
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:padding="5dp">
+    
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="10dp">
+        
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <de.hdodenhof.circleimageview.CircleImageView
+                android:layout_width="75dp"
+                android:layout_height="75dp"
+                android:id="@+id/photo"
+                app:civ_border_color="@color/black"
+                app:civ_border_width="1dp"
+                android:src="@mipmap/ic_launcher_round"/>
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/tvName"
+                android:layout_toEndOf="@id/photo"
+                android:layout_marginStart="10dp"
+                android:textSize="18sp"
+                android:text="Name"
+                android:textStyle="bold"
+                android:textColor="@color/black" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/tvEmail"
+                android:layout_toEndOf="@id/photo"
+                android:layout_marginStart="10dp"
+                android:layout_below="@id/tvName"
+                android:textSize="18sp"
+                android:text="Email"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/tvPhone"
+                android:layout_toEndOf="@id/photo"
+                android:layout_marginStart="10dp"
+                android:layout_below="@id/tvEmail"
+                android:textSize="18sp"
+                android:text="Phone" />
+            
+        </RelativeLayout>
+        
+    </androidx.cardview.widget.CardView>
+
+</RelativeLayout>
+
+
+
+
+
+115. At the root directory java create > ec2retrofit, create a new file StarTrekAdapter:
+
+package com.cosmic.ec2retrofit;
+
+import android.content.Context;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+import com.bumptech.glide.Glide;
+import java.util.ArrayList;
+import de.hdodenhof.circleimageview.CircleImageView;
+
+public class StarTrekAdapter extends RecyclerView.Adapter<StarTrekAdapter.StarTrekViewHolder>{
+    
+    private final Context context;
+    private final ArrayList<StarTrek> starTreks;
+
+    public StarTrekAdapter(Context context, ArrayList<StarTrek> starTreks) {
+        this.context = context;
+        this.starTreks = starTreks;
+    }
+
+    @NonNull
+    @Override
+    public StarTrekViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(context).inflate(R.layout.item_view_star_trek, parent, false);
+        return new StarTrekViewHolder(view);
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull StarTrekViewHolder holder, int position) {
+        StarTrek starTrek = starTreks.get(position);
+        Glide.with(context).load(starTrek.getUrl()).into(holder.circleImageView);
+        holder.tvName.setText(starTrek.getName());
+        holder.tvEmail.setText(starTrek.getId());
+        holder.tvPhone.setText(starTrek.getPhone());
+    }
+
+    @Override
+    public int getItemCount() {
+        if (starTreks == null){
+            return 0;
+        }else{
+            return starTreks.size();
+        }
+    }
+
+    static class StarTrekViewHolder extends RecyclerView.ViewHolder {
+        
+        private final TextView tvName, tvEmail, tvPhone;
+        private final CircleImageView circleImageView;
+        
+        public StarTrekViewHolder(@NonNull View itemView) {
+            super(itemView);
+            tvName = itemView.findViewById(R.id.tvName);
+            tvEmail = itemView.findViewById(R.id.tvEmail);
+            tvPhone = itemView.findViewById(R.id.tvPhone);
+            circleImageView = itemView.findViewById(R.id.photo);
+        }
+        
+    }
+}
+
+
+
+116. Switch back to MainActivity.java and modify:
+
+
+public class MainActivity extends AppCompatActivity {
+
+    private static final String TAG = "MainActivity";
+
+    EC2API ec2API;
+    private RecyclerView recyclerView;
+    private StarTrekAdapter starTrekAdapter;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        recyclerView = findViewById(R.id.recycler_view);
+
+        initRetrofit();
+    }
+
+    private void initRetrofit(){
+        Gson gson = new GsonBuilder().setLenient().create();
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("http://52.203.46.157:5000")
+                .addConverterFactory(GsonConverterFactory.create(gson))
+                .build();
+        ec2API = retrofit.create(EC2API.class);
+
+        getStarTreks();
+    }
+
+    private void getStarTreks(){
+        Call<List<StarTrek>> starTreks = ec2API.getStarTreks();
+        starTreks.enqueue(new Callback<List<StarTrek>>() {
+            @Override
+            public void onResponse(Call<List<StarTrek>> call, Response<List<StarTrek>> response) {
+                if (!response.isSuccessful()){
+                    Log.d(TAG, "onResponse: there was a response but it was not successful : " + "\n" + response.code());
+                }
+                ArrayList<StarTrek> starTrekArrayList = new ArrayList<>();
+                starTrekArrayList.clear();
+                List<StarTrek> starTrek = response.body();
+                for (int i = 0; i < starTrek.size(); i++){
+                    starTrekArrayList.add(starTrek.get(i));
+                }
+                recyclerView.setHasFixedSize(true);
+                LinearLayoutManager linearLayoutManager = new LinearLayoutManager(MainActivity.this);
+                linearLayoutManager.setReverseLayout(true);
+                recyclerView.setLayoutManager(linearLayoutManager);
+                starTrekAdapter = new StarTrekAdapter(MainActivity.this, starTrekArrayList);
+                recyclerView.setAdapter(starTrekAdapter);
+            }
+
+            @Override
+            public void onFailure(Call<List<StarTrek>> call, Throwable t) {
+                Toast.makeText(MainActivity.this, t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+}
+
+
+
+117. Mistake in the adapter. I forgot to call String.valueOf() on an integer. Modify:
+
+    @Override
+    public void onBindViewHolder(@NonNull StarTrekViewHolder holder, int position) {
+        StarTrek starTrek = starTreks.get(position);
+        Glide.with(context).load(starTrek.getUrl()).into(holder.circleImageView);
+        holder.tvName.setText(starTrek.getName());
+        holder.tvEmail.setText(String.valueOf(starTrek.getId()));
+        holder.tvPhone.setText(starTrek.getPhone());
+    }
+
+
+
+118. Modify MainActivity.java:
+
+                recyclerView.setHasFixedSize(true);
+                LinearLayoutManager linearLayoutManager = new LinearLayoutManager(MainActivity.this);
+                linearLayoutManager.setReverseLayout(false);
+                recyclerView.setLayoutManager(linearLayoutManager);
+                starTrekAdapter = new StarTrekAdapter(MainActivity.this, starTrekArrayList);
+                recyclerView.setAdapter(starTrekAdapter);
+
+
+
+119. This is enought for one night. To call the project complete, add Animatoo animations, create a ViewStarTrekActivity, a custom RecycleOnClickListener and view the individual "star-trek". Maybe add some biographical information to each Star Trek in the index.js file and review:
+https://www.geeksforgeeks.org/how-to-read-and-write-json-file-using-node-js/
+to see how to store the json data separately but access it in index.js
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
